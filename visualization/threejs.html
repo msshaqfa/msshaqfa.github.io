@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DHA Morph</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden}
+#container{width:100%;height:100%}
+#loading{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#333;font-size:1.1rem;background:rgba(255,255,255,0.9);padding:16px 32px;border-radius:8px;z-index:100;transition:opacity 0.3s;box-shadow:0 2px 12px rgba(0,0,0,0.1)}
+#loading.done{display:none}
+#controls{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.95);border-radius:10px;padding:8px 18px;display:flex;align-items:center;gap:10px;z-index:10;box-shadow:0 2px 12px rgba(0,0,0,0.1);border:1px solid #ddd}
+#controls button{background:#f0f0f0;border:1px solid #ccc;color:#333;width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center}
+#controls button:hover{background:#e0e0e0}
+#play-btn{font-size:1rem;background:#5b9bd5;color:#fff;border-color:#4a8ac4}
+#play-btn:hover{background:#4a8ac4}
+#controls input[type="range"]{-webkit-appearance:none;width:180px;height:6px;background:#ddd;border-radius:3px;outline:none;cursor:pointer}
+#controls input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;background:#5b9bd5;border-radius:50%;cursor:pointer}
+#frame-label{color:#555;font-size:.85rem;min-width:55px;text-align:center}
+#field-select,#speed-select,#dataset-select{background:#f0f0f0;color:#333;border:1px solid #ccc;border-radius:4px;padding:4px 8px;font-size:.85rem;cursor:pointer}
+#color-scale{position:absolute;right:16px;top:50%;transform:translateY(-50%);width:20px;height:240px;border-radius:4px;z-index:10;border:1px solid rgba(0,0,0,0.3)}
+.scale-label{position:absolute;right:40px;color:#000;font-size:11px;font-family:monospace;z-index:10;font-weight:600}
+#side-tools{position:absolute;left:12px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.95);border-radius:10px;padding:8px 6px;display:flex;flex-direction:column;align-items:center;gap:6px;z-index:10;box-shadow:0 2px 12px rgba(0,0,0,0.1);border:1px solid #ddd}
+#side-tools button{background:#f0f0f0;border:1px solid #ccc;color:#333;width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center}
+#side-tools button:hover{background:#e0e0e0}
+#side-tools label{color:#555;font-size:.7rem;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
+@media(max-width:600px){#controls{padding:6px 10px;gap:5px}#controls input[type="range"]{width:100px}#frame-label{min-width:45px;font-size:.7rem}#field-select,#speed-select{font-size:.7rem}}
+</style>
+</head>
+<body>
+<div id="container"></div>
+<div id="loading">Loading...</div>
+<div id="controls">
+  <button id="step-back">&lt;&lt;</button>
+  <button id="play-btn">▶</button>
+  <button id="step-fwd">&gt;&gt;</button>
+  <input type="range" id="time-slider" min="0" max="10" value="0" step="1">
+  <span id="frame-label">0 / 10</span>
+  <select id="dataset-select"></select>
+  <select id="field-select"></select>
+  <select id="speed-select">
+    <option value="0.5">0.5x</option>
+    <option value="1" selected>1x</option>
+    <option value="2">2x</option>
+  </select>
+</div>
+<div id="side-tools">
+  <label><input type="checkbox" id="wireframe-toggle" checked><span>Wire</span></label>
+  <button id="auto-rotate-btn">⟳</button>
+  <button id="reset-btn">⌂</button>
+  <button id="screenshot-btn">📷</button>
+  <button id="fullscreen-btn">⛶</button>
+</div>
+<canvas id="color-scale"></canvas>
+<div class="scale-label" id="scale-max" style="top:calc(50% - 128px)"></div>
+<div class="scale-label" id="scale-min" style="top:calc(50% + 118px)"></div>
+<img id="cmap-img" src="/assets/data/icefire.png" style="display:none" crossorigin="anonymous">
+
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+
+const BASE = '/assets/data/';
+let currentDataset = '';
+let N = 0, models = [], wireframes = [], scalarData = null, current = 0, playing = false;
+let speed = 1, lastTime = 0, currentFloat = 0, currentField = 'actuation', fieldRanges = {};
+let scene, camera, renderer, controls, currentGeom;
+
+const loadingEl = document.getElementById('loading');
+const playBtn = document.getElementById('play-btn');
+const slider = document.getElementById('time-slider');
+const frameLabel = document.getElementById('frame-label');
+const fieldSelect = document.getElementById('field-select');
+const speedSelect = document.getElementById('speed-select');
+const colorScale = document.getElementById('color-scale');
+
+const container = document.getElementById('container');
+renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(container.clientWidth, container.clientHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+container.appendChild(renderer.domElement);
+
+scene = new THREE.Scene();
+scene.background = new THREE.Color(0xffffff);
+camera = new THREE.PerspectiveCamera(45, container.clientWidth/container.clientHeight, 0.1, 1000);
+controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+const k = new THREE.DirectionalLight(0xffffff, 2.5); k.position.set(30,50,40); scene.add(k);
+const f2 = new THREE.DirectionalLight(0xaaccff, 1.2); f2.position.set(-30,0,-30); scene.add(f2);
+const rim = new THREE.DirectionalLight(0xffffff, 0.8); rim.position.set(0,-10,40); scene.add(rim);
+const grid = new THREE.GridHelper(120,30,0xcccccc,0xe8e8e8); grid.position.y=-42; scene.add(grid);
+
+// Colormap
+let cmapSamples = null;
+function loadCmap() {
+  return new Promise(resolve => {
+    const img = document.getElementById('cmap-img');
+    if (img.complete) { buildCmap(img); resolve(); return; }
+    img.onload = () => { buildCmap(img); resolve(); };
+    img.onerror = () => { cmapSamples = null; resolve(); };
+  });
+}
+function buildCmap(img) {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 1;
+  const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0, 256, 1);
+  const d = ctx.getImageData(0,0,256,1).data;
+  cmapSamples = new Float32Array(768);
+  for (let i = 0; i < 256; i++) {
+    cmapSamples[i*3] = d[i*4]/255; cmapSamples[i*3+1] = d[i*4+1]/255; cmapSamples[i*3+2] = d[i*4+2]/255;
+  }
+}
+function toColor(t) {
+  if (cmapSamples) { const i = Math.min(255, Math.floor(t*255))*3; return [cmapSamples[i], cmapSamples[i+1], cmapSamples[i+2]]; }
+  t = Math.max(0, Math.min(1, t));
+  return [Math.max(0, Math.min(1, t*1.5-0.25)), Math.max(0, Math.min(1, 1.0-Math.abs(t-0.5)*2.5)), Math.max(0, Math.min(1, 1.5-t*1.5))];
+}
+
+function drawColorScale() {
+  const cv = colorScale, ctx = cv.getContext('2d');
+  const range = fieldRanges[currentField];
+  if (range) { document.getElementById('scale-max').textContent = range.max.toFixed(3); document.getElementById('scale-min').textContent = range.min.toFixed(3); }
+  if (cmapSamples) {
+    cv.width = 20; cv.height = 256;
+    const id = ctx.createImageData(20, 256);
+    for (let y = 0; y < 256; y++) { const i = (255-y)*3; for (let x = 0; x < 20; x++) { const p = (y*20+x)*4; id.data[p]=cmapSamples[i]*255; id.data[p+1]=cmapSamples[i+1]*255; id.data[p+2]=cmapSamples[i+2]*255; id.data[p+3]=255; } }
+    ctx.putImageData(id, 0, 0);
+  } else {
+    cv.width = 20; cv.height = 240;
+    for (let y = 0; y < cv.height; y++) { const t = 1-y/(cv.height-1); const [r,g,b] = toColor(t); ctx.fillStyle = `rgb(${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)})`; ctx.fillRect(0, y, cv.width, 1); }
+  }
+}
+
+function colorize(idx) {
+  if (!currentGeom || !scalarData) return;
+  const arr = scalarData.timesteps[idx][currentField]; if (!arr) return;
+  const range = fieldRanges[currentField], vmin = range.min, vmax = range.max, span = vmax-vmin||1;
+  const colors = new Float32Array(arr.length*3);
+  for (let i = 0; i < arr.length; i++) { const [r,g,b] = toColor((arr[i]-vmin)/span); colors[i*3]=r; colors[i*3+1]=g; colors[i*3+2]=b; }
+  currentGeom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  currentGeom.attributes.color.needsUpdate = true;
+  drawColorScale();
+}
+
+function showFrame(idx) {
+  if (!models[idx]) return;
+  for (let i = 0; i < N; i++) { if (models[i]) models[i].visible = false; if (wireframes[i]) wireframes[i].visible = false; }
+  models[idx].visible = true;
+  if (wireframes[idx] && document.getElementById('wireframe-toggle').checked) wireframes[idx].visible = true;
+  currentGeom = models[idx].geometry;
+  colorize(idx);
+  current = idx; slider.value = idx; frameLabel.textContent = `${idx} / ${N-1}`;
+}
+
+async function loadDataset(folder) {
+  for (const m of models) if (m) { scene.remove(m); if (m.material) m.material.dispose(); }
+  for (const w of wireframes) if (w) scene.remove(w);
+  models = []; wireframes = []; current = 0; currentFloat = 0;
+  playing = false; playBtn.textContent = '\u25B6'; currentGeom = null;
+
+  const base = BASE + folder + '/';
+  loadingEl.textContent = `Loading ${folder}...`;
+  loadingEl.classList.remove('done');
+
+  const resp = await fetch(base + 'data.json');
+  scalarData = await resp.json();
+  fieldRanges = scalarData.fields;
+  N = scalarData.timesteps.length;
+  slider.max = N-1; slider.value = 0;
+  frameLabel.textContent = `0 / ${N-1}`;
+
+  fieldSelect.innerHTML = '';
+  for (const f of Object.keys(fieldRanges)) {
+    const o = document.createElement('option'); o.value = f;
+    o.textContent = f.replace(/_/g,' ').replace(/\b\w/g, c=>c.toUpperCase());
+    fieldSelect.appendChild(o);
+  }
+  currentField = fieldSelect.options[0].value;
+  drawColorScale();
+
+  const bounds = scalarData.bounds, loader = new GLTFLoader();
+  let loaded = 0;
+  await Promise.all(scalarData.timesteps.map((ts, idx) => new Promise((resolve, reject) => {
+    loader.load(base + ts.file, (gltf) => {
+      const mesh = gltf.scene; mesh.traverse(c => { if (c.isMesh) models[idx] = c; });
+      if (!models[idx]) models[idx] = mesh;
+      models[idx].visible = false;
+      models[idx].rotation.x = -Math.PI/2;
+
+      const om = models[idx].material;
+      const mat = new THREE.MeshPhongMaterial({ color: 0xffffff, vertexColors: true, side: THREE.DoubleSide, specular: 0x111111, shininess: 30 });
+      models[idx].material = mat;
+      if (om) om.dispose();
+
+      const wf = new THREE.LineSegments(new THREE.WireframeGeometry(models[idx].geometry), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.12 }));
+      wf.visible = false;
+      models[idx].add(wf);
+      wireframes[idx] = wf;
+      scene.add(models[idx]);
+
+      loaded++; loadingEl.textContent = `Loading ${folder}... ${loaded}/${N}`;
+      resolve();
+    }, undefined, reject);
+  })));
+
+  const bx = (bounds.max[0]+bounds.min[0])/2, by = (bounds.max[2]+bounds.min[2])/2, bz = (bounds.max[1]+bounds.min[1])/2;
+  const dx = bounds.max[0]-bounds.min[0], dy = bounds.max[2]-bounds.min[2], dz = bounds.max[1]-bounds.min[1];
+  const r = Math.sqrt(dx*dx+dy*dy+dz*dz)*0.4;
+  controls.target.set(bx, by, bz);
+  camera.position.set(bx+r*0.8, by+r*0.5, bz+r*0.8);
+  controls.update();
+
+  loadingEl.classList.add('done');
+  showFrame(0);
+}
+
+async function init() {
+  await loadCmap();
+  const dsResp = await fetch(BASE + 'datasets.json');
+  const dsData = await dsResp.json();
+  const dsSelect = document.getElementById('dataset-select');
+  dsData.datasets.forEach(ds => { const o = document.createElement('option'); o.value = ds.folder; o.textContent = ds.name; dsSelect.appendChild(o); });
+  currentDataset = dsData.datasets[0].folder;
+  dsSelect.value = currentDataset;
+  dsSelect.addEventListener('change', () => { currentDataset = dsSelect.value; loadDataset(currentDataset); });
+
+  await loadDataset(currentDataset);
+  requestAnimationFrame(animate);
+}
+
+function animate(ts) {
+  requestAnimationFrame(animate);
+  controls.update();
+  if (playing && lastTime) { currentFloat += ((ts-lastTime)/1000)*speed*8; if (currentFloat>=N) currentFloat=0; const fi = Math.floor(currentFloat); if (fi!==current) { current=fi; showFrame(fi); } }
+  lastTime = ts;
+  renderer.render(scene, camera);
+}
+
+playBtn.addEventListener('click', () => { playing=!playing; playBtn.textContent=playing?'\u23F8':'\u25B6'; if(playing) lastTime=0; });
+document.getElementById('step-back').addEventListener('click', () => { playing=false; playBtn.textContent='\u25B6'; showFrame(Math.max(0,current-1)); });
+document.getElementById('step-fwd').addEventListener('click', () => { playing=false; playBtn.textContent='\u25B6'; showFrame(Math.min(N-1,current+1)); });
+slider.addEventListener('input', () => { playing=false; playBtn.textContent='\u25B6'; const i=parseInt(slider.value); currentFloat=i; showFrame(i); });
+fieldSelect.addEventListener('change', () => { currentField=fieldSelect.value; colorize(current); drawColorScale(); });
+speedSelect.addEventListener('change', () => { speed=parseFloat(speedSelect.value); });
+
+document.getElementById('wireframe-toggle').addEventListener('change', function() { if(this.checked&&wireframes[current]) wireframes[current].visible=true; else for(const w of wireframes) if(w) w.visible=false; });
+
+let autoRotate = false;
+document.getElementById('auto-rotate-btn').addEventListener('click', function() { autoRotate=!autoRotate; controls.autoRotate=autoRotate; controls.autoRotateSpeed=1.5; this.style.background=autoRotate?'#5b9bd5':''; this.style.color=autoRotate?'#fff':''; });
+document.getElementById('reset-btn').addEventListener('click', () => { if(!scalarData) return; const b=scalarData.bounds; const bx=(b.max[0]+b.min[0])/2,by=(b.max[2]+b.min[2])/2,bz=(b.max[1]+b.min[1])/2; const dx=b.max[0]-b.min[0],dy=b.max[2]-b.min[2],dz=b.max[1]-b.min[1]; const r=Math.sqrt(dx*dx+dy*dy+dz*dz)*0.4; controls.target.set(bx,by,bz); camera.position.set(bx+r*0.8,by+r*0.5,bz+r*0.8); controls.update(); });
+document.getElementById('screenshot-btn').addEventListener('click', () => { renderer.render(scene,camera); const a=document.createElement('a'); a.download='frame_'+current+'.png'; a.href=renderer.domElement.toDataURL('image/png'); a.click(); });
+document.getElementById('fullscreen-btn').addEventListener('click', () => { document.fullscreenElement?document.exitFullscreen():container.requestFullscreen(); });
+
+document.addEventListener('keydown', e => {
+  if (e.key===' ') { e.preventDefault(); playing=!playing; playBtn.textContent=playing?'\u23F8':'\u25B6'; if(playing) lastTime=0; }
+  if (e.key==='ArrowLeft') { playing=false; playBtn.textContent='\u25B6'; showFrame(Math.max(0,current-1)); }
+  if (e.key==='ArrowRight') { playing=false; playBtn.textContent='\u25B6'; showFrame(Math.min(N-1,current+1)); }
+});
+window.addEventListener('resize', () => { camera.aspect=container.clientWidth/container.clientHeight; camera.updateProjectionMatrix(); renderer.setSize(container.clientWidth, container.clientHeight); });
+
+init().catch(err => { loadingEl.textContent='Error: '+err.message; loadingEl.style.color='#c00'; });
+</script>
+</body>
+</html>

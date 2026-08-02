@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<VTKFile type="Collection" version="0.1" byte_order="LittleEndian">
+  <Collection>
+    <DataSet timestep="0" file="shape_morph_opt_stage_01.vtu"/>
+    <DataSet timestep="1" file="shape_morph_opt_stage_02.vtu"/>
+    <DataSet timestep="2" file="shape_morph_opt_stage_03.vtu"/>
+    <DataSet timestep="3" file="shape_morph_opt_stage_04.vtu"/>
+    <DataSet timestep="4" file="shape_morph_opt_stage_05.vtu"/>
+    <DataSet timestep="5" file="shape_morph_opt_stage_06.vtu"/>
+    <DataSet timestep="6" file="shape_morph_opt_stage_07.vtu"/>
+    <DataSet timestep="7" file="shape_morph_opt_stage_08.vtu"/>
+  </Collection>
+</VTKFile>

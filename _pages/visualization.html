@@ -1,0 +1,24 @@
+---
+layout: archive
+title: "Visualization"
+permalink: /visualization/
+author_profile: true
+---
+
+<p>Interactive VTK time-series visualization of morphing disk. Use the controls below to play, pause, step through timesteps, and change the color mapping. Mouse: drag to rotate, scroll to zoom, right-drag to pan.</p>
+<p style="margin-top: 1em;">
+  Simulation of Koiter shell models using a spectral global parameterization to embed incompatible strains on soft thin shell structures. Both datasets use the same governing equations but differ in the parameterization:
+</p>
+<ul style="margin-bottom: 0.5em;">
+  <li><strong>DHA Morph</strong> — <a href="/publication/shaqfa_choi_beyer_2021">Disk harmonics</a> (Shaqfa, Choi &amp; Beyer, 2024, <em>J. Comput. Phys.</em>)</li>
+  <li><strong>SOH Morph</strong> — <a href="/publication/shaqfa_vanrees_2024">Spheroidal harmonics</a> (Shaqfa &amp; van Rees, 2024, <em>Constr. Build. Mater.</em>)</li>
+</ul>
+<p style="margin-bottom: 1em;">
+  Color maps show <em>actuation</em>, <em>bending moments</em>, and <em>membrane forces</em> across morphing stages.
+</p>
+<iframe src="/visualization/threejs.html" width="100%" height="800" style="border:1px solid #333; border-radius: 8px;"></iframe>
+
+<p style="margin-top: 0.5em; font-size: 0.85rem;">
+  <em>Data loaded from <code>assets/data/DHA_morph_vtkjs/</code> (converted VTU → vtk.js JSON).<br>
+  To update after changing source VTU files: <code>python3 scripts/convert_vtu_to_vtkjs.py</code> then <code>cd visualization && npm run build</code></em>
+</p>

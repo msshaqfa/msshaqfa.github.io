@@ -1,0 +1,14 @@
+{
+  "datasets": [
+    {
+      "id": "DHA_morph",
+      "name": "DHA Morph",
+      "folder": "DHA_morph_glb"
+    },
+    {
+      "id": "SOH_morph",
+      "name": "SOH Morph",
+      "folder": "SOH_morph_glb"
+    }
+  ]
+}

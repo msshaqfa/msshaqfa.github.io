@@ -178,6 +178,16 @@ exclude:
   - config
   - Dockerfile
   - Gemfile
+  - Gemfile.lock
+  - LICENSE
+  - README
+  - node_modules
+  - vendor/bundle
+  - vendor/cache
+  - vendor/gems
+  - vendor/ruby
+  - visualization/node_modules
+  - Gemfile
   - Gruntfile.js
   - gulpfile.js
   - LICENSE
