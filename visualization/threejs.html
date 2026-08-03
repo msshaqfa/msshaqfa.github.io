@@ -7,51 +7,45 @@
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden}
 #container{width:100%;height:100%}
-#loading{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#333;font-size:1.1rem;background:rgba(255,255,255,0.9);padding:16px 32px;border-radius:8px;z-index:100;transition:opacity 0.3s;box-shadow:0 2px 12px rgba(0,0,0,0.1)}
+#loading{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#bbb;font-size:1rem;background:rgba(20,20,30,0.92);padding:14px 28px;border-radius:8px;z-index:100;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.08)}
 #loading.done{display:none}
-#controls{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.95);border-radius:10px;padding:8px 18px;display:flex;align-items:center;gap:10px;z-index:10;box-shadow:0 2px 12px rgba(0,0,0,0.1);border:1px solid #ddd}
-#controls button{background:#f0f0f0;border:1px solid #ccc;color:#333;width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center}
-#controls button:hover{background:#e0e0e0}
-#play-btn{font-size:1rem;background:#5b9bd5;color:#fff;border-color:#4a8ac4}
-#play-btn:hover{background:#4a8ac4}
-#controls input[type="range"]{-webkit-appearance:none;width:180px;height:6px;background:#ddd;border-radius:3px;outline:none;cursor:pointer}
-#controls input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;background:#5b9bd5;border-radius:50%;cursor:pointer}
-#frame-label{color:#555;font-size:.85rem;min-width:55px;text-align:center}
-#field-select,#speed-select,#dataset-select{background:#f0f0f0;color:#333;border:1px solid #ccc;border-radius:4px;padding:4px 8px;font-size:.85rem;cursor:pointer}
-#color-scale{position:absolute;right:16px;top:50%;transform:translateY(-50%);width:20px;height:240px;border-radius:4px;z-index:10;border:1px solid rgba(0,0,0,0.3)}
-.scale-label{position:absolute;right:40px;color:#000;font-size:11px;font-family:monospace;z-index:10;font-weight:600}
-#side-tools{position:absolute;left:12px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.95);border-radius:10px;padding:8px 6px;display:flex;flex-direction:column;align-items:center;gap:6px;z-index:10;box-shadow:0 2px 12px rgba(0,0,0,0.1);border:1px solid #ddd}
-#side-tools button{background:#f0f0f0;border:1px solid #ccc;color:#333;width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center}
-#side-tools button:hover{background:#e0e0e0}
-#side-tools label{color:#555;font-size:.7rem;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
+#controls{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(20,20,32,0.9);border-radius:10px;padding:6px 14px;display:flex;align-items:center;gap:8px;z-index:10;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.08);box-shadow:0 4px 24px rgba(0,0,0,0.3)}
+#controls button{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:#ccc;width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:.8rem;display:flex;align-items:center;justify-content:center;transition:all .15s}
+#controls button:hover{background:rgba(255,255,255,0.18);color:#fff}
+#play-btn{font-size:.9rem;background:rgba(91,155,213,0.3);border-color:rgba(91,155,213,0.4);color:#8cc8ff}
+#play-btn:hover{background:rgba(91,155,213,0.5)}
+#controls input[type="range"]{-webkit-appearance:none;width:160px;height:4px;background:rgba(255,255,255,0.12);border-radius:2px;outline:none;cursor:pointer}
+#controls input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;background:#7eb8e0;border-radius:50%;cursor:pointer;box-shadow:0 0 6px rgba(126,184,224,0.4)}
+#frame-label{color:#999;font-size:.78rem;min-width:50px;text-align:center;font-variant-numeric:tabular-nums}
+#field-select,#speed-select,#dataset-select{background:rgba(255,255,255,0.06);color:#ccc;border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:4px 8px;font-size:.78rem;cursor:pointer;outline:none}
+#field-select:hover,#speed-select:hover,#dataset-select:hover{background:rgba(255,255,255,0.12)}
+#side-tools{position:absolute;left:12px;top:50%;transform:translateY(-50%);background:rgba(20,20,32,0.9);border-radius:10px;padding:6px 5px;display:flex;flex-direction:column;align-items:center;gap:5px;z-index:10;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.08);box-shadow:0 4px 24px rgba(0,0,0,0.3)}
+#side-tools button{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:#ccc;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:.75rem;display:flex;align-items:center;justify-content:center;transition:all .15s}
+#side-tools button:hover{background:rgba(255,255,255,0.18);color:#fff}
+#side-tools label{color:#999;font-size:.65rem;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
+#color-scale{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:16px;height:200px;border-radius:4px;z-index:10;border:1px solid rgba(255,255,255,0.15)}
+.scale-label{position:absolute;right:34px;color:#999;font-size:10px;font-family:monospace;z-index:10;font-weight:500}
+#clip-slider{background:rgba(20,20,32,0.92)!important;border-color:rgba(255,255,255,0.12)!important;backdrop-filter:blur(10px);box-shadow:0 4px 24px rgba(0,0,0,0.3)}
+#clip-slider span{color:#999!important}
+#clip-slider button{background:rgba(255,255,255,0.08)!important;border-color:rgba(255,255,255,0.12)!important;color:#ccc!important}
+#clip-slider #clip-y{background:rgba(91,155,213,0.3)!important;border-color:rgba(91,155,213,0.4)!important;color:#8cc8ff!important}
+#fps{position:absolute;top:10px;left:10px;color:#888;font:10px monospace;z-index:10;background:rgba(20,20,32,0.8);padding:2px 6px;border-radius:4px;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,0.06)}
 @media(max-width:768px){
-  #controls{padding:6px 10px;gap:4px;flex-wrap:wrap;justify-content:center;width:95%}
-  #controls input[type="range"]{width:80px}
-  #frame-label{min-width:40px;font-size:.7rem}
-  #field-select,#speed-select,#dataset-select{font-size:.7rem;max-width:100px}
+  #controls{padding:5px 8px;gap:4px;flex-wrap:wrap;justify-content:center;width:96%}
+  #controls input[type="range"]{width:60px}
+  #frame-label{min-width:38px;font-size:.68rem}
+  #field-select,#speed-select,#dataset-select{font-size:.68rem;max-width:90px}
   #side-tools{padding:4px 3px;gap:3px}
-  #side-tools button{width:24px;height:24px;font-size:.7rem}
-  #color-scale{width:14px;height:160px;right:8px}
-  .scale-label{right:28px;font-size:9px}
+  #side-tools button{width:24px;height:24px;font-size:.65rem}
+  #color-scale{width:12px;height:140px;right:6px}
+  .scale-label{right:24px;font-size:8px}
 }
-
-body.dark #controls, body.dark #side-tools { background: rgba(30,30,40,0.95); border-color: #444; }
-body.dark #controls button, body.dark #side-tools button { background: #3a3a4a; border-color: #555; color: #ddd; }
-body.dark #controls button:hover, body.dark #side-tools button:hover { background: #4a4a5a; }
-body.dark #frame-label, body.dark #side-tools label, body.dark .scale-label { color: #ccc; }
-body.dark #controls input[type="range"] { background: #444; }
-body.dark #field-select, body.dark #speed-select, body.dark #dataset-select { background: #3a3a4a; color: #ddd; border-color: #555; }
-body.dark #loading { background: rgba(20,20,30,0.95); color: #ddd; }
-body.dark #color-scale { border-color: rgba(255,255,255,0.3); }
-body.dark #clip-slider { background: rgba(30,30,40,0.95); border-color: #444; }
-body.dark #clip-slider span { color: #ccc; }
-body.dark #clip-slider button { background: #3a3a4a; border-color: #555; color: #ddd; }
-body.dark .fps-cnt { background: rgba(30,30,40,0.85) !important; color: #aaa !important; }
 </style>
 </head>
 <body>
 <div id="container"></div>
 <div id="loading">Loading...</div>
+<div id="fps">0 FPS</div>
 <div id="controls">
   <button id="step-back">&lt;&lt;</button>
   <button id="play-btn">▶</button>
@@ -141,10 +135,7 @@ const axesHelper = new THREE.AxesHelper(15);
 scene.add(axesHelper);
 
 // FPS counter
-const fpsEl = document.createElement('div');
-fpsEl.style.cssText = 'position:absolute;top:8px;left:8px;color:#888;font:11px monospace;z-index:10;background:rgba(255,255,255,0.85);padding:2px 6px;border-radius:4px';
-fpsEl.className = 'fps-cnt';
-document.body.appendChild(fpsEl);
+const fpsEl = document.getElementById('fps');
 let fpsFrames = 0, fpsTime = performance.now();
 
 // Clipping
