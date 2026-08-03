@@ -24,7 +24,16 @@ html,body{width:100%;height:100%;overflow:hidden}
 #side-tools button{background:#f0f0f0;border:1px solid #ccc;color:#333;width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center}
 #side-tools button:hover{background:#e0e0e0}
 #side-tools label{color:#555;font-size:.7rem;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
-@media(max-width:600px){#controls{padding:6px 10px;gap:5px}#controls input[type="range"]{width:100px}#frame-label{min-width:45px;font-size:.7rem}#field-select,#speed-select{font-size:.7rem}}
+@media(max-width:768px){
+  #controls{padding:6px 10px;gap:4px;flex-wrap:wrap;justify-content:center;width:95%}
+  #controls input[type="range"]{width:80px}
+  #frame-label{min-width:40px;font-size:.7rem}
+  #field-select,#speed-select,#dataset-select{font-size:.7rem;max-width:100px}
+  #side-tools{padding:4px 3px;gap:3px}
+  #side-tools button{width:24px;height:24px;font-size:.7rem}
+  #color-scale{width:14px;height:160px;right:8px}
+  .scale-label{right:28px;font-size:9px}
+}
 
 body.dark #controls, body.dark #side-tools { background: rgba(30,30,40,0.95); border-color: #444; }
 body.dark #controls button, body.dark #side-tools button { background: #3a3a4a; border-color: #555; color: #ddd; }
