@@ -19,10 +19,11 @@ html,body{width:100%;height:100%;overflow:hidden}
 #frame-label{color:#999;font-size:.78rem;min-width:50px;text-align:center;font-variant-numeric:tabular-nums}
 #field-select,#speed-select,#dataset-select{background:rgba(255,255,255,0.06);color:#ccc;border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:4px 8px;font-size:.78rem;cursor:pointer;outline:none}
 #field-select:hover,#speed-select:hover,#dataset-select:hover{background:rgba(255,255,255,0.12)}
-#side-tools{position:absolute;left:12px;top:50%;transform:translateY(-50%);background:rgba(20,20,32,0.9);border-radius:10px;padding:6px 5px;display:flex;flex-direction:column;align-items:center;gap:5px;z-index:10;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.08);box-shadow:0 4px 24px rgba(0,0,0,0.3)}
-#side-tools button{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:#ccc;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:.75rem;display:flex;align-items:center;justify-content:center;transition:all .15s}
+#side-tools{position:absolute;left:12px;top:50%;transform:translateY(-50%);background:rgba(20,20,32,0.9);border-radius:10px;padding:6px 8px;display:flex;flex-direction:column;align-items:stretch;gap:4px;z-index:10;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.08);box-shadow:0 4px 24px rgba(0,0,0,0.3)}
+#side-tools button{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:#ccc;border-radius:6px;cursor:pointer;font-size:.7rem;display:flex;align-items:center;justify-content:flex-start;gap:6px;padding:4px 8px;transition:all .15s;white-space:nowrap}
 #side-tools button:hover{background:rgba(255,255,255,0.18);color:#fff}
-#side-tools label{color:#999;font-size:.65rem;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
+#side-tools label{color:#999;font-size:.7rem;display:flex;align-items:center;gap:4px;cursor:pointer;padding:3px 6px;border-radius:6px;white-space:nowrap}
+#side-tools label:hover{color:#ccc}
 #color-scale{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:16px;height:200px;border-radius:4px;z-index:10;border:1px solid rgba(255,255,255,0.15)}
 .scale-label{position:absolute;right:34px;color:#999;font-size:10px;font-family:monospace;z-index:10;font-weight:500}
 #clip-slider{background:rgba(20,20,32,0.92)!important;border-color:rgba(255,255,255,0.12)!important;backdrop-filter:blur(10px);box-shadow:0 4px 24px rgba(0,0,0,0.3)}
@@ -61,14 +62,14 @@ html,body{width:100%;height:100%;overflow:hidden}
   </select>
 </div>
 <div id="side-tools">
-  <label><input type="checkbox" id="wireframe-toggle" checked><span>Wire</span></label>
-  <label><input type="checkbox" id="clip-toggle"><span>Clip</span></label>
-  <button id="dark-btn" title="Dark/Light">🌗</button>
-  <button id="auto-rotate-btn">⟳</button>
-  <button id="reset-btn">⌂</button>
-  <button id="screenshot-btn">📷</button>
-  <button id="export-ply-btn">PLY</button>
-  <button id="fullscreen-btn">⛶</button>
+  <label><input type="checkbox" id="wireframe-toggle" checked> Wire</label>
+  <label><input type="checkbox" id="clip-toggle"> Clip</label>
+  <button id="dark-btn">🌗 Dark</button>
+  <button id="auto-rotate-btn">⟳ Rotate</button>
+  <button id="reset-btn">⌂ Reset</button>
+  <button id="screenshot-btn">📷 Shot</button>
+  <button id="export-ply-btn">📦 Export</button>
+  <button id="fullscreen-btn">⛶ Full</button>
 </div>
 <div id="clip-slider" style="display:none;position:absolute;left:60px;top:50%;transform:translateY(-50%);z-index:10;background:rgba(255,255,255,0.95);border-radius:8px;padding:6px 10px;border:1px solid #ddd;flex-direction:column;gap:4px;align-items:center">
   <div style="display:flex;gap:3px">
