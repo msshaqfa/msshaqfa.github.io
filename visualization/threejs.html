@@ -25,6 +25,15 @@ html,body{width:100%;height:100%;overflow:hidden}
 #side-tools button:hover{background:#e0e0e0}
 #side-tools label{color:#555;font-size:.7rem;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
 @media(max-width:600px){#controls{padding:6px 10px;gap:5px}#controls input[type="range"]{width:100px}#frame-label{min-width:45px;font-size:.7rem}#field-select,#speed-select{font-size:.7rem}}
+
+body.dark #controls, body.dark #side-tools { background: rgba(30,30,40,0.95); border-color: #444; }
+body.dark #controls button, body.dark #side-tools button { background: #3a3a4a; border-color: #555; color: #ddd; }
+body.dark #controls button:hover, body.dark #side-tools button:hover { background: #4a4a5a; }
+body.dark #frame-label, body.dark #side-tools label, body.dark .scale-label { color: #ccc; }
+body.dark #controls input[type="range"] { background: #444; }
+body.dark #field-select, body.dark #speed-select, body.dark #dataset-select { background: #3a3a4a; color: #ddd; border-color: #555; }
+body.dark #loading { background: rgba(20,20,30,0.95); color: #ddd; }
+body.dark #color-scale { border-color: rgba(255,255,255,0.3); }
 </style>
 </head>
 <body>
@@ -46,6 +55,7 @@ html,body{width:100%;height:100%;overflow:hidden}
 </div>
 <div id="side-tools">
   <label><input type="checkbox" id="wireframe-toggle" checked><span>Wire</span></label>
+  <button id="dark-btn" title="Dark/Light">🌗</button>
   <button id="auto-rotate-btn">⟳</button>
   <button id="reset-btn">⌂</button>
   <button id="screenshot-btn">📷</button>
@@ -198,11 +208,12 @@ async function loadDataset(folder) {
       models[idx].rotation.x = -Math.PI/2;
 
       const om = models[idx].material;
-      const mat = new THREE.MeshPhongMaterial({ color: 0xffffff, vertexColors: true, side: THREE.DoubleSide, specular: 0x111111, shininess: 30 });
+      const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, side: THREE.DoubleSide, roughness: 0.5, metalness: 0.05 });
       models[idx].material = mat;
       if (om) om.dispose();
 
-      const wf = new THREE.LineSegments(new THREE.WireframeGeometry(models[idx].geometry), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.12 }));
+      const wm = darkMode ? wireDark : wireLight;
+      const wf = new THREE.LineSegments(new THREE.WireframeGeometry(models[idx].geometry), new THREE.LineBasicMaterial({ color: wm.color, transparent: true, opacity: wm.opacity }));
       wf.visible = false;
       models[idx].add(wf);
       wireframes[idx] = wf;
@@ -260,6 +271,29 @@ document.getElementById('auto-rotate-btn').addEventListener('click', function() 
 document.getElementById('reset-btn').addEventListener('click', () => { if(!scalarData) return; const b=scalarData.bounds; const bx=(b.max[0]+b.min[0])/2,by=(b.max[2]+b.min[2])/2,bz=(b.max[1]+b.min[1])/2; const dx=b.max[0]-b.min[0],dy=b.max[2]-b.min[2],dz=b.max[1]-b.min[1]; const r=Math.sqrt(dx*dx+dy*dy+dz*dz)*0.4; controls.target.set(bx,by,bz); camera.position.set(bx+r*0.8,by+r*0.5,bz+r*0.8); controls.update(); });
 document.getElementById('screenshot-btn').addEventListener('click', () => { renderer.render(scene,camera); const a=document.createElement('a'); a.download='frame_'+current+'.png'; a.href=renderer.domElement.toDataURL('image/png'); a.click(); });
 document.getElementById('fullscreen-btn').addEventListener('click', () => { document.fullscreenElement?document.exitFullscreen():container.requestFullscreen(); });
+
+// Dark/light toggle
+let darkMode = false;
+const darkBtn = document.getElementById('dark-btn');
+const gridHelper = grid;
+const gridDark = { major: 0x444455, minor: 0x2a2a33 };
+const gridLight = { major: 0xcccccc, minor: 0xe8e8e8 };
+const wireDark = { color: 0xcccccc, opacity: 0.15 };
+const wireLight = { color: 0x000000, opacity: 0.12 };
+
+darkBtn.addEventListener('click', () => {
+  darkMode = !darkMode;
+  // Scene background
+  scene.background = new THREE.Color(darkMode ? 0x1a1a2e : 0xffffff);
+  // Grid
+  gridHelper.material.color.set(darkMode ? gridDark.major : gridLight.major);
+  if (gridHelper.material.length) gridHelper.material[1].color.set(darkMode ? gridDark.minor : gridLight.minor);
+  // Wireframes
+  const wm = darkMode ? wireDark : wireLight;
+  for (const w of wireframes) if (w) { w.material.color.set(wm.color); w.material.opacity = wm.opacity; }
+  // Controls CSS
+  document.body.classList.toggle('dark', darkMode);
+});
 
 document.addEventListener('keydown', e => {
   if (e.key===' ') { e.preventDefault(); playing=!playing; playBtn.textContent=playing?'\u23F8':'\u25B6'; if(playing) lastTime=0; }
