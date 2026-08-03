@@ -73,6 +73,7 @@ body.dark .fps-cnt { background: rgba(30,30,40,0.85) !important; color: #aaa !im
   <button id="auto-rotate-btn">⟳</button>
   <button id="reset-btn">⌂</button>
   <button id="screenshot-btn">📷</button>
+  <button id="export-ply-btn">PLY</button>
   <button id="fullscreen-btn">⛶</button>
 </div>
 <div id="clip-slider" style="display:none;position:absolute;left:60px;top:50%;transform:translateY(-50%);z-index:10;background:rgba(255,255,255,0.95);border-radius:8px;padding:6px 10px;border:1px solid #ddd;flex-direction:column;gap:4px;align-items:center">
@@ -358,6 +359,30 @@ document.getElementById('auto-rotate-btn').addEventListener('click', function() 
 document.getElementById('reset-btn').addEventListener('click', () => { if(!scalarData) return; const b=scalarData.bounds; const bx=(b.max[0]+b.min[0])/2,by=(b.max[2]+b.min[2])/2,bz=(b.max[1]+b.min[1])/2; const dx=b.max[0]-b.min[0],dy=b.max[2]-b.min[2],dz=b.max[1]-b.min[1]; const r=Math.sqrt(dx*dx+dy*dy+dz*dz)*0.4; controls.target.set(bx,by,bz); camera.position.set(bx+r*0.8,by+r*0.5,bz+r*0.8); controls.update(); });
 document.getElementById('screenshot-btn').addEventListener('click', () => { renderer.render(scene,camera); const a=document.createElement('a'); a.download='frame_'+current+'.png'; a.href=renderer.domElement.toDataURL('image/png'); a.click(); });
 document.getElementById('fullscreen-btn').addEventListener('click', () => { document.fullscreenElement?document.exitFullscreen():container.requestFullscreen(); });
+
+document.getElementById('export-ply-btn').addEventListener('click', () => {
+  if (!currentGeom || !scalarData) return;
+  const pos = currentGeom.getAttribute('position');
+  const col = currentGeom.getAttribute('color');
+  if (!pos) return;
+  const nv = pos.count, idx = currentGeom.index, nf = idx ? idx.count / 3 : 0;
+  let ply = 'ply\nformat ascii 1.0\n';
+  ply += `element vertex ${nv}\nproperty float x\nproperty float y\nproperty float z\nproperty uchar red\nproperty uchar green\nproperty uchar blue\n`;
+  ply += `element face ${nf}\nproperty list uchar int vertex_indices\nend_header\n`;
+  for (let i = 0; i < nv; i++) {
+    ply += `${pos.getX(i).toFixed(6)} ${pos.getY(i).toFixed(6)} ${pos.getZ(i).toFixed(6)} ${col ? Math.round(col.getX(i) * 255) : 128} ${col ? Math.round(col.getY(i) * 255) : 128} ${col ? Math.round(col.getZ(i) * 255) : 128}\n`;
+  }
+  if (idx) {
+    for (let i = 0; i < idx.count; i += 3) {
+      ply += `3 ${idx.getX(i)} ${idx.getX(i + 1)} ${idx.getX(i + 2)}\n`;
+    }
+  }
+  const a = document.createElement('a');
+  a.download = `${currentDataset.replace('_glb', '')}_frame_${current}.ply`;
+  a.href = URL.createObjectURL(new Blob([ply], { type: 'text/plain' }));
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
 
 // Dark/light toggle
 let darkMode = false;
