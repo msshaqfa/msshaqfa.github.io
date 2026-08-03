@@ -43,6 +43,10 @@ body.dark #controls input[type="range"] { background: #444; }
 body.dark #field-select, body.dark #speed-select, body.dark #dataset-select { background: #3a3a4a; color: #ddd; border-color: #555; }
 body.dark #loading { background: rgba(20,20,30,0.95); color: #ddd; }
 body.dark #color-scale { border-color: rgba(255,255,255,0.3); }
+body.dark #clip-slider { background: rgba(30,30,40,0.95); border-color: #444; }
+body.dark #clip-slider span { color: #ccc; }
+body.dark #clip-slider button { background: #3a3a4a; border-color: #555; color: #ddd; }
+body.dark .fps-cnt { background: rgba(30,30,40,0.85) !important; color: #aaa !important; }
 </style>
 </head>
 <body>
@@ -64,11 +68,21 @@ body.dark #color-scale { border-color: rgba(255,255,255,0.3); }
 </div>
 <div id="side-tools">
   <label><input type="checkbox" id="wireframe-toggle" checked><span>Wire</span></label>
+  <label><input type="checkbox" id="clip-toggle"><span>Clip</span></label>
   <button id="dark-btn" title="Dark/Light">🌗</button>
   <button id="auto-rotate-btn">⟳</button>
   <button id="reset-btn">⌂</button>
   <button id="screenshot-btn">📷</button>
   <button id="fullscreen-btn">⛶</button>
+</div>
+<div id="clip-slider" style="display:none;position:absolute;left:60px;top:50%;transform:translateY(-50%);z-index:10;background:rgba(255,255,255,0.95);border-radius:8px;padding:6px 10px;border:1px solid #ddd;flex-direction:column;gap:4px;align-items:center">
+  <div style="display:flex;gap:3px">
+    <button id="clip-x" style="width:22px;height:22px;font-size:0.65rem;background:#f0f0f0;border:1px solid #ccc;border-radius:3px;cursor:pointer">X</button>
+    <button id="clip-y" style="width:22px;height:22px;font-size:0.65rem;background:#5b9bd5;color:#fff;border:1px solid #4a8ac4;border-radius:3px;cursor:pointer">Y</button>
+    <button id="clip-z" style="width:22px;height:22px;font-size:0.65rem;background:#f0f0f0;border:1px solid #ccc;border-radius:3px;cursor:pointer">Z</button>
+  </div>
+  <input type="range" id="clip-pos" min="-60" max="60" value="0" step="0.5" style="writing-mode:vertical-lr;direction:rtl;height:120px;width:16px">
+  <span id="clip-val" style="font-size:0.65rem;color:#888">0</span>
 </div>
 <canvas id="color-scale"></canvas>
 <div class="scale-label" id="scale-max" style="top:calc(50% - 128px)"></div>
@@ -105,6 +119,7 @@ renderer.setSize(container.clientWidth, container.clientHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.2;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.localClippingEnabled = true;
 container.appendChild(renderer.domElement);
 
 scene = new THREE.Scene();
@@ -119,6 +134,21 @@ const k = new THREE.DirectionalLight(0xffffff, 2.5); k.position.set(30,50,40); s
 const f2 = new THREE.DirectionalLight(0xaaccff, 1.2); f2.position.set(-30,0,-30); scene.add(f2);
 const rim = new THREE.DirectionalLight(0xffffff, 0.8); rim.position.set(0,-10,40); scene.add(rim);
 const grid = new THREE.GridHelper(120,30,0xcccccc,0xe8e8e8); grid.position.y=-42; scene.add(grid);
+
+// Axes indicator
+const axesHelper = new THREE.AxesHelper(15);
+scene.add(axesHelper);
+
+// FPS counter
+const fpsEl = document.createElement('div');
+fpsEl.style.cssText = 'position:absolute;top:8px;left:8px;color:#888;font:11px monospace;z-index:10;background:rgba(255,255,255,0.85);padding:2px 6px;border-radius:4px';
+fpsEl.className = 'fps-cnt';
+document.body.appendChild(fpsEl);
+let fpsFrames = 0, fpsTime = performance.now();
+
+// Clipping
+let clipPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 50);
+let clippingEnabled = false;
 
 // Colormap
 let cmapSamples = null;
@@ -217,7 +247,7 @@ async function loadDataset(folder) {
       models[idx].rotation.x = -Math.PI/2;
 
       const om = models[idx].material;
-      const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, side: THREE.DoubleSide, roughness: 0.5, metalness: 0.05 });
+      const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, side: THREE.DoubleSide, roughness: 0.5, metalness: 0.05, clippingPlanes: clippingEnabled ? [clipPlane] : [], clipShadows: clippingEnabled });
       models[idx].material = mat;
       if (om) om.dispose();
 
@@ -264,6 +294,12 @@ function animate(ts) {
   if (playing && lastTime) { currentFloat += ((ts-lastTime)/1000)*speed*8; if (currentFloat>=N) currentFloat=0; const fi = Math.floor(currentFloat); if (fi!==current) { current=fi; showFrame(fi); } }
   lastTime = ts;
   renderer.render(scene, camera);
+
+  fpsFrames++;
+  if (ts - fpsTime >= 1000) {
+    fpsEl.textContent = Math.round(fpsFrames / ((ts - fpsTime) / 1000)) + ' FPS';
+    fpsFrames = 0; fpsTime = ts;
+  }
 }
 
 playBtn.addEventListener('click', () => { playing=!playing; playBtn.textContent=playing?'\u23F8':'\u25B6'; if(playing) lastTime=0; });
@@ -273,7 +309,49 @@ slider.addEventListener('input', () => { playing=false; playBtn.textContent='\u2
 fieldSelect.addEventListener('change', () => { currentField=fieldSelect.value; colorize(current); drawColorScale(); });
 speedSelect.addEventListener('change', () => { speed=parseFloat(speedSelect.value); });
 
-document.getElementById('wireframe-toggle').addEventListener('change', function() { if(this.checked&&wireframes[current]) wireframes[current].visible=true; else for(const w of wireframes) if(w) w.visible=false; });
+// Clipping toggle
+document.getElementById('clip-toggle').addEventListener('change', function() {
+  clippingEnabled = this.checked;
+  document.getElementById('clip-slider').style.display = clippingEnabled ? 'flex' : 'none';
+  updateClipPlanes();
+});
+// Clip axis buttons
+let clipAxis = 'y';
+function setClipAxis(a) {
+  clipAxis = a;
+  ['x','y','z'].forEach(ax => {
+    const b = document.getElementById('clip-'+ax);
+    b.style.background = ax === a ? '#5b9bd5' : '#f0f0f0';
+    b.style.color = ax === a ? '#fff' : '#333';
+  });
+  const normals = {x: [1,0,0], y: [0,-1,0], z: [0,0,1]};
+  clipPlane.normal.set(...normals[a]);
+  updateClipPlanes();
+}
+document.getElementById('clip-x').addEventListener('click', () => setClipAxis('x'));
+document.getElementById('clip-y').addEventListener('click', () => setClipAxis('y'));
+document.getElementById('clip-z').addEventListener('click', () => setClipAxis('z'));
+
+document.getElementById('clip-pos').addEventListener('input', function() {
+  clipPlane.constant = parseFloat(this.value);
+  document.getElementById('clip-val').textContent = this.value;
+  updateClipPlanes();
+});
+function updateClipPlanes() {
+  for (const m of models) {
+    if (!m || !m.material) continue;
+    if (clippingEnabled) {
+      m.material.clippingPlanes = [clipPlane];
+      m.material.clipShadows = true;
+      m.material.side = THREE.DoubleSide;
+      m.material.needsUpdate = true;
+    } else {
+      m.material.clippingPlanes = [];
+      m.material.clipShadows = false;
+      m.material.needsUpdate = true;
+    }
+  }
+}
 
 let autoRotate = false;
 document.getElementById('auto-rotate-btn').addEventListener('click', function() { autoRotate=!autoRotate; controls.autoRotate=autoRotate; controls.autoRotateSpeed=1.5; this.style.background=autoRotate?'#5b9bd5':''; this.style.color=autoRotate?'#fff':''; });
