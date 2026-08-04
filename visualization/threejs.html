@@ -22,6 +22,10 @@ html,body{width:100%;height:100%;overflow:hidden}
 #side-tools{position:absolute;left:12px;top:50%;transform:translateY(-50%);background:rgba(20,20,32,0.9);border-radius:10px;padding:6px 8px;display:flex;flex-direction:column;align-items:stretch;gap:4px;z-index:10;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.08);box-shadow:0 4px 24px rgba(0,0,0,0.3)}
 #side-tools button{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:#ccc;border-radius:6px;cursor:pointer;font-size:.68rem;display:flex;align-items:center;justify-content:flex-start;gap:8px;padding:4px 10px;transition:all .15s;white-space:nowrap;min-width:fit-content}
 #side-tools button:hover{background:rgba(255,255,255,0.18);color:#fff}
+.dropdown-wrapper{position:relative;display:flex;flex-direction:column}
+.dropdown-menu{display:none;position:absolute;left:100%;top:0;margin-left:4px;background:rgba(20,20,32,0.94);border-radius:8px;padding:4px;flex-direction:column;gap:2px;z-index:20;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.12);box-shadow:0 4px 24px rgba(0,0,0,0.4);min-width:180px}
+.dropdown-menu button{white-space:nowrap;font-size:.7rem;padding:6px 12px;justify-content:flex-start}
+.dropdown-menu.show{display:flex}
 #side-tools label{color:#999;font-size:.7rem;display:flex;align-items:center;gap:4px;cursor:pointer;padding:3px 6px;border-radius:6px;white-space:nowrap}
 #side-tools label:hover{color:#ccc}
 #color-scale{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:16px;height:200px;border-radius:4px;z-index:10;border:1px solid rgba(255,255,255,0.15)}
@@ -68,7 +72,14 @@ html,body{width:100%;height:100%;overflow:hidden}
   <button id="auto-rotate-btn">⟳ Rotate</button>
   <button id="reset-btn">⌂ Reset</button>
   <button id="screenshot-btn">📷 Shot</button>
-  <button id="export-ply-btn">📦 Export</button>
+  <div class="dropdown-wrapper" id="download-wrapper">
+    <button id="export-ply-btn">📦 Export</button>
+    <div class="dropdown-menu" id="download-menu">
+      <button id="dl-current-ply">Current Frame (PLY)</button>
+      <button id="dl-all-ply-zip">All Frames (PLY ZIP)</button>
+      <button id="dl-data-json">Scalar Data (JSON)</button>
+    </div>
+  </div>
   <button id="fullscreen-btn">⛶ Full</button>
 </div>
 <div id="clip-slider" style="display:none;position:absolute;left:60px;top:50%;transform:translateY(-50%);z-index:10;background:rgba(255,255,255,0.95);border-radius:8px;padding:6px 10px;border:1px solid #ddd;flex-direction:column;gap:4px;align-items:center">
@@ -84,6 +95,7 @@ html,body{width:100%;height:100%;overflow:hidden}
 <div class="scale-label" id="scale-max" style="top:calc(50% - 128px)"></div>
 <div class="scale-label" id="scale-min" style="top:calc(50% + 118px)"></div>
 <img id="cmap-img" src="/assets/data/icefire.png" style="display:none" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
@@ -352,28 +364,125 @@ document.getElementById('reset-btn').addEventListener('click', () => { if(!scala
 document.getElementById('screenshot-btn').addEventListener('click', () => { renderer.render(scene,camera); const a=document.createElement('a'); a.download='frame_'+current+'.png'; a.href=renderer.domElement.toDataURL('image/png'); a.click(); });
 document.getElementById('fullscreen-btn').addEventListener('click', () => { document.fullscreenElement?document.exitFullscreen():container.requestFullscreen(); });
 
-document.getElementById('export-ply-btn').addEventListener('click', () => {
-  if (!currentGeom || !scalarData) return;
+// Download helpers
+function downloadBlob(content, filename, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function generatePly(idx) {
+  if (!models[idx]) return '';
+  if (models[idx].geometry) currentGeom = models[idx].geometry;
+  if (!currentGeom) return '';
   const pos = currentGeom.getAttribute('position');
+  if (!pos) return '';
   const col = currentGeom.getAttribute('color');
-  if (!pos) return;
-  const nv = pos.count, idx = currentGeom.index, nf = idx ? idx.count / 3 : 0;
+  const gIdx = currentGeom.index;
+  const nv = pos.count, nf = gIdx ? gIdx.count / 3 : 0;
+  const fieldData = scalarData && scalarData.timesteps[idx] ? scalarData.timesteps[idx][currentField] : null;
   let ply = 'ply\nformat ascii 1.0\n';
-  ply += `element vertex ${nv}\nproperty float x\nproperty float y\nproperty float z\nproperty uchar red\nproperty uchar green\nproperty uchar blue\n`;
+  ply += `element vertex ${nv}\nproperty float x\nproperty float y\nproperty float z\n`;
+  ply += 'property uchar red\nproperty uchar green\nproperty uchar blue\n';
+  if (fieldData) ply += 'property float scalar\n';
   ply += `element face ${nf}\nproperty list uchar int vertex_indices\nend_header\n`;
   for (let i = 0; i < nv; i++) {
-    ply += `${pos.getX(i).toFixed(6)} ${pos.getY(i).toFixed(6)} ${pos.getZ(i).toFixed(6)} ${col ? Math.round(col.getX(i) * 255) : 128} ${col ? Math.round(col.getY(i) * 255) : 128} ${col ? Math.round(col.getZ(i) * 255) : 128}\n`;
+    ply += `${pos.getX(i).toFixed(6)} ${pos.getY(i).toFixed(6)} ${pos.getZ(i).toFixed(6)} `;
+    ply += `${col ? Math.round(col.getX(i) * 255) : 128} ${col ? Math.round(col.getY(i) * 255) : 128} ${col ? Math.round(col.getZ(i) * 255) : 128}`;
+    if (fieldData) ply += ` ${fieldData[i].toFixed(6)}`;
+    ply += '\n';
   }
-  if (idx) {
-    for (let i = 0; i < idx.count; i += 3) {
-      ply += `3 ${idx.getX(i)} ${idx.getX(i + 1)} ${idx.getX(i + 2)}\n`;
+  if (gIdx) {
+    for (let i = 0; i < gIdx.count; i += 3) {
+      ply += `3 ${gIdx.getX(i)} ${gIdx.getX(i + 1)} ${gIdx.getX(i + 2)}\n`;
     }
   }
-  const a = document.createElement('a');
-  a.download = `${currentDataset.replace('_glb', '')}_frame_${current}.ply`;
-  a.href = URL.createObjectURL(new Blob([ply], { type: 'text/plain' }));
-  a.click();
-  URL.revokeObjectURL(a.href);
+  return ply;
+}
+
+function exportCurrentPly() {
+  if (!currentGeom || !scalarData) return;
+  const ply = generatePly(current);
+  if (!ply) return;
+  downloadBlob(ply, `${currentDataset.replace('_glb', '')}_frame_${current}.ply`, 'text/plain');
+}
+
+function downloadDataJson() {
+  if (!scalarData) return;
+  downloadBlob(JSON.stringify(scalarData, null, 2), `${currentDataset}_data.json`, 'application/json');
+}
+
+async function downloadAllPlyZip() {
+  if (!models.length || !scalarData) return;
+  const origField = currentField;
+  const origFrame = current;
+  const loadingEl = document.getElementById('loading');
+  loadingEl.textContent = 'Building zip...';
+  loadingEl.classList.remove('done');
+
+  const zip = new JSZip();
+  for (let i = 0; i < N; i++) {
+    if (!models[i]) continue;
+    loadColors(i);
+    const ply = generatePly(i);
+    if (ply) zip.file(`frame_${i}.ply`, ply);
+  }
+  zip.file('data.json', JSON.stringify(scalarData, null, 2));
+  zip.file('README.txt',
+    `Dataset: ${currentDataset}\nFormat: ASCII PLY with scalar field "${origField}"\n` +
+    `Vertex properties: x, y, z (float), r, g, b (uchar 0-255), scalar (float, ${origField})\n` +
+    `Face properties: triangle vertex indices\n` +
+    `data.json contains full scalar field data for all timesteps.\n`
+  );
+
+  const blob = await zip.generateAsync({ type: 'blob' });
+  downloadBlob(blob, `${currentDataset}_all_frames.zip`, 'application/zip');
+
+  loadingEl.classList.add('done');
+  showFrame(origFrame);
+}
+
+function loadColors(idx) {
+  if (!models[idx]) return;
+  const geom = models[idx].geometry;
+  if (!geom || !scalarData) return;
+  const arr = scalarData.timesteps[idx][currentField];
+  if (!arr) return;
+  const range = fieldRanges[currentField], vmin = range.min, vmax = range.max, span = vmax - vmin || 1;
+  const colors = new Float32Array(arr.length * 3);
+  for (let i = 0; i < arr.length; i++) {
+    const [r, g, b] = toColor((arr[i] - vmin) / span);
+    colors[i * 3] = r; colors[i * 3 + 1] = g; colors[i * 3 + 2] = b;
+  }
+  geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geom.attributes.color.needsUpdate = true;
+}
+
+document.getElementById('export-ply-btn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  document.getElementById('download-menu').classList.toggle('show');
+});
+document.getElementById('dl-current-ply').addEventListener('click', (e) => {
+  e.stopPropagation();
+  exportCurrentPly();
+  document.getElementById('download-menu').classList.remove('show');
+});
+document.getElementById('dl-all-ply-zip').addEventListener('click', (e) => {
+  e.stopPropagation();
+  downloadAllPlyZip();
+  document.getElementById('download-menu').classList.remove('show');
+});
+document.getElementById('dl-data-json').addEventListener('click', (e) => {
+  e.stopPropagation();
+  downloadDataJson();
+  document.getElementById('download-menu').classList.remove('show');
+});
+document.addEventListener('click', () => {
+  document.getElementById('download-menu').classList.remove('show');
 });
 
 // Dark/light toggle
